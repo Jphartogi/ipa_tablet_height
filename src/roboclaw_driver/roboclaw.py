@@ -9,9 +9,10 @@ class Roboclaw:
 	def __init__(self, comport, rate, timeout=0.01, retries=3):
 		self.comport = comport
 		self.rate = rate
-		self.timeout = timeout;
+		self.timeout = timeout
 		self._trystimeout = retries
-		self._crc = 0;
+		self._crc = 0
+		self._port = serial.Serial(port=self.comport, baudrate=self.rate, timeout=1, interCharTimeout=self.timeout)
 
 	#Command Enums
 	class Cmd():
@@ -836,7 +837,7 @@ class Roboclaw:
 		return (0,0,0)
 
 	def SpeedAccelM1M2_2(self,address,accel1,speed1,accel2,speed2):
-		return self._write4S44S4(address,self.Cmd.MIXEDSPEED2ACCEL,accel,speed1,accel2,speed2)
+		return self._write4S44S4(address,self.Cmd.MIXEDSPEED2ACCEL,accel1,speed1,accel2,speed2)
 
 	def SpeedAccelDistanceM1M2_2(self,address,accel1,speed1,distance1,accel2,speed2,distance2,buffer):
 		return self._write4S444S441(address,self.Cmd.MIXEDSPEED2ACCELDIST,accel1,speed1,distance1,accel2,speed2,distance2,buffer)
@@ -1028,9 +1029,5 @@ class Roboclaw:
 		return self._read1(address,self.Cmd.GETPWMMODE)
 
 	def Open(self):
-		try:
-			self._port = serial.Serial(port=self.comport, baudrate=self.rate, timeout=1, interCharTimeout=self.timeout)
-		except:
-			return 0
-		return 1
+		pass
 

@@ -1,31 +1,95 @@
 #!/usr/bin/env python
 import time
-from roboclaw import Roboclaw
+from roboclaw_driver.roboclaw import Roboclaw
+import serial
 
-#Windows comport name
-#rc = Roboclaw("COM9",115200)
-#Linux comport name
+import rospy
+import std_msgs.msg 
+
+
+
 rc = Roboclaw("/dev/ttyACM0",115200)
-
-rc.Open()
 address = 0x80
+rc.Open()
+rc.ResetEncoders(address)
 
-rc.ForwardMixed(address, 0)
-rc.TurnRightMixed(address, 0)
+i=1
 
-while(1):
-	rc.ForwardMixed(address, 32)
-	time.sleep(2)
-	rc.BackwardMixed(address, 32)
-	time.sleep(2)
-	rc.TurnRightMixed(address, 32)
-	time.sleep(2)
-	rc.TurnLeftMixed(address, 32)
-	time.sleep(2)
-	rc.ForwardMixed(address, 0)
-	rc.TurnRightMixed(address, 32)
-	time.sleep(2)
-	rc.TurnLeftMixed(address, 32)
-	time.sleep(2)
-	rc.TurnRightMixed(address, 0)
-	time.sleep(2)
+
+############################
+
+
+
+def talker(x):
+	#enc1=x
+	pub = rospy.Publisher('chatter',std_msgs.msg.Int64, queue_size=10)
+	rospy.init_node('talker', anonymous=True)
+	#rate = rospy.Rate(10) # 10hz
+	#while not rospy.is_shutdown():
+	pub.publish(x[1])
+		#rate.sleep()
+
+def main():
+	while 1:
+		rc.ForwardM1(address, 12)
+		time.sleep(2)
+		rc.ForwardM1(address, 0)
+		time.sleep(1)
+		
+		x = rc.ReadEncM1(address)
+		talker(x)
+		if x[1]>15000:
+			rc.ForwardM1(address, 0)
+			
+			while 1:
+				talker("helo")
+			
+			
+		
+		
+
+			
+			
+	
+	
+	
+		
+
+
+
+
+if __name__ =="__main__":main()
+
+
+		#while 1 :
+		#	talker()
+	#rc.ResetEncoders(address)
+
+	#rc.BackwardM2(address, 32)
+	#enc = rc.ReadEncM1(address)
+
+	#time.sleep(5)
+	
+	#while enc<5000 :
+	#	talker()
+	
+	#if enc>5000:
+	#	rc.ForwardM1(address, 0)
+	#rc.ForwardM2(address, 0)
+	#time.sleep(1)
+	
+	#i=i+1
+
+
+###############################
+#while 1:
+#	enc1 = rc.ReadEncM1(address)
+#	rospy.loginfo(enc1)
+######################################
+
+        #hello_str = "hello world %s" % rospy.get_time()
+        #rospy.loginfo(hello_str)
+       # pub.publish(b=255)
+        #pub.publish(enc1)
+        #pub.publish(hello_str)
+        #rate.sleep()
