@@ -38,7 +38,7 @@ The launch file can be configure at the command line with arguments, by changing
 |max_speed|20|Max speed of the tablet|
 |min_speed|20|Minimum speed of the tablet|
 |ticks_per_meter|4342.2|The number of encoder ticks per meter of movement|
-|height)tolerance|0.1|How accurate the height should be|
+|height_tolerance|0.1|How accurate the height should be|
 
 
 # author
