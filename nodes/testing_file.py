@@ -16,11 +16,6 @@ from emasin_proxy.srv import *
 import diagnostic_msgs
 import diagnostic_updater
 
-import termios
-
-import serial
-import os
-
 ter=0
 tc=0.01
 
@@ -55,7 +50,6 @@ class Node():
 		self.tolerance = float(rospy.get_param("~height_tolerance","0.1"))
 		# initialization port and address
 		self.rc = Roboclaw("/dev/roboclaw",self.baud)
-		self.port = "/dev/roboclaw"
 		self.address = 0x80
 		self.rc.Open()
 		
@@ -77,36 +71,15 @@ class Node():
 		self.height_confirmed = False
 		self.trigger = False
 		self.encoder_value = 0
-		self.joy_pressed = False
-		self.error_count = 0
-
-
+		
+		
+        
 
 	def callback_joy(self,joy): # using joy buttons to move
 		# speed = self.rc.ReadISpeedM1(self.address)
 		
-		# it will stuck here if there is an error
-		
-		self.error_count = self.error_count + 1
-
-		if self.error_count > 30:
-			rospy.signal_shutdown("restarted to remove error!")		
-		print "value error_count ", self.error_count
-		print "errornnya",self.rc.ReadError(self.address)
-		print "read encoder valuenya", self.rc.ReadEncM1(self.address)
 		# constantly calculate the value of the encoder!
 		self.calculate_encoder()
-		print "kesini dia"	
-			
-		if joy.buttons[2] == 1 or joy.buttons[1] == 1:
-			self.find_height_mode = False
-			self.joy_pressed = True
-			self.go_down = False
-			self.go_up = False
-
-		if joy.buttons[1] == 0 or joy.buttons[2] == 0:
-			self.joy_pressed = False
-			
 
 		if joy.buttons[2] == 1 or self.go_up == True:
 			
@@ -146,11 +119,10 @@ class Node():
 						time.sleep(tc)
 
 			else:   # for initialization and controlled with joystick
-				# set the find height mode to be false so it needs another service to go to another height
-				
 				self.rc.SetPinFunctions(self.address, 0,0,0)
 				self.forward(20)
 				print "++"
+				
 			# print "Pin Functions Value ",self.rc.ReadPinFunctions(self.address)
 			# print "Read Error Value ",self.rc.ReadError(self.address)
 
@@ -200,8 +172,6 @@ class Node():
 
 		else:
 			self.stop()
-		
-		self.error_count = 0 # this means the program is executed and no error!
 
 	def speed_control(self,curr_dist,goal_dist):
 		total_distance = abs(goal_dist - self.last_goal)
@@ -259,7 +229,7 @@ class Node():
 				
 			# # when to constant
 			else:
-				
+				print "trigger reseted!"
 				self.trigger = False
 				self.acc = False
 				self.dcc = False
@@ -277,7 +247,7 @@ class Node():
 			# set the s4 modes so it become an emergency stop
 			self.rc.SetPinFunctions(self.address, 0,2,0)
 			status = self.rc.ReadError(self.address)[1]
-			# print ("status value ",status)
+			print ("status value ",status)
 			# status of the emergency stop will be more than 0 if pressed
 			if status > 0:
 				self.go_down = False
@@ -315,10 +285,6 @@ class Node():
 				self.go_up = False
 				self.goal_reached = False
 
-
-		else:
-			pass
-
 		return self.encoder_value
 
 
@@ -347,11 +313,11 @@ class Node():
 			self.tablet_height = int(round(self.tablet_height/5))
 
 			# enter value in cm
-			print "Got Service, go to desired tablet height" , self.tablet_height*5
+			print "Got Service, go to desired tablet height" , self.tablet_height
 
 			# transfer height [m] into ticks
 			goal_ticks = self.tablet_height
-			
+			print " detected goal is : ",goal_ticks
 			
 			# move to init position?	
 			if goal_ticks == 0 and not self.height_initialized:
@@ -399,7 +365,7 @@ class Node():
 				break
 	
 	def execute_tablet_height(self,height):
-		
+		print "height accepted : ",height
 		if self.height_confirmed:
 			self.find_height_mode = True
 			self.goal_reached = False
@@ -420,18 +386,9 @@ class Node():
 		
 				
 if __name__ == "__main__":
-	rospy.init_node('ipa_tablet_height',disable_signals=True)
+	rospy.init_node('ipa_tablet_height')
 	node = Node()
 	rospy.loginfo("tablet height control is running")
 	rospy.spin()
-
-
-
-
-
-
-
-
-
 
 
