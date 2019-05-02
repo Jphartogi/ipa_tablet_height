@@ -23,9 +23,6 @@ rosservice call /tabletheight "enc:x"
 ``` 
 you can input the value of x in cm
 
-## Dependencies
-
-This roboclaw can not be executed if there is no joy node, or in other words it is subscribed to the /joy topic. But it can be changed to any topic as long as it keep publishing. ( for infinite looping )
 
 ## Parameters
 The launch file can be configure at the command line with arguments, by changing the value in the launch file or through the rosparam server.
