@@ -79,55 +79,52 @@ class Node():
 		self.encoder_value = 0
 		self.joy_pressed = False
 		self.error_count = 0
+		self.rate = rospy.Rate(10) # 10hz
+		while not rospy.is_shutdown():
+			self.callback()
+			self.rate.sleep()
 
 
-
-	def callback_joy(self,joy): # using joy buttons to move
-		# speed = self.rc.ReadISpeedM1(self.address)
-		
-		# it will stuck here if there is an error
+	def callback(self):
+		# constantly calculate the value of the encoder!
 		
 		self.error_count = self.error_count + 1
-
+		
 		if self.error_count > 30:
 			rospy.signal_shutdown("restarted to remove error!")		
 		print "value error_count ", self.error_count
-		print "errornnya",self.rc.ReadError(self.address)
-		print "read encoder valuenya", self.rc.ReadEncM1(self.address)
-		# constantly calculate the value of the encoder!
+
+		# it will stuck here if there is an error
+		print "error value",self.rc.ReadError(self.address)
+		print "read encoder value", self.rc.ReadEncM1(self.address)
 		self.calculate_encoder()
-		print "kesini dia"	
-			
-		if joy.buttons[2] == 1 or joy.buttons[1] == 1:
-			self.find_height_mode = False
-			self.joy_pressed = True
-			self.go_down = False
-			self.go_up = False
-
-		if joy.buttons[1] == 0 or joy.buttons[2] == 0:
-			self.joy_pressed = False
-			
-
-		if joy.buttons[2] == 1 or self.go_up == True:
+	
+		
+		if self.go_up == True:
 			
 			# in auto mode
 			if self.find_height_mode == True:
-
+				
 				# set the emergency stop to be off so it can go up again.
 				self.rc.SetPinFunctions(self.address, 0,0,0)
 				
 				# acceleration mode
 				if not self.dcc: 
+					
 					if self.speed > self.max_speed - 1:
+						
 						const_speed = self.speed
 						self.forward(const_speed)
 						
 					else:
+						
 						self.speed = self.speed + 3
 						self.forward(self.speed)
+						
 						time.sleep(tc)
 				# decceleration mode		
 				else:   
+					
 					if self.speed > self.min_speed - 1:
 						# create a linear equation speed = x * d + c
 						x = self.min_speed / self.dcc_dist
@@ -144,36 +141,34 @@ class Node():
 					else:
 						self.forward(self.min_speed)
 						time.sleep(tc)
-
+		
 			else:   # for initialization and controlled with joystick
 				# set the find height mode to be false so it needs another service to go to another height
-				
 				self.rc.SetPinFunctions(self.address, 0,0,0)
 				self.forward(20)
 				print "++"
-			# print "Pin Functions Value ",self.rc.ReadPinFunctions(self.address)
-			# print "Read Error Value ",self.rc.ReadError(self.address)
 
-
-		elif joy.buttons[1] == 1 or self.go_down == True:
+		elif self.go_down == True:
 			
 			# in auto mode
 			if self.find_height_mode == True:
-
+				
 				# to turn on the emergency stop function for safety reason
 				self.rc.SetPinFunctions(self.address, 0,2,0)
 				# acceleration mode
 				if not self.dcc: 
+					
 					if self.speed > self.max_speed - 1:
 						const_speed = self.speed
 						self.backward(const_speed)
-						# print "const speednya ",const_speed
+						
 					else:
 						self.speed = self.speed + 3
-						# print "acc speednya ",self.speed
+						
 						self.backward(self.speed)
 						time.sleep(tc)
 				else: # decceleration mode
+					
 					if self.speed > self.min_speed - 1:
 						x = self.min_speed / self.dcc_dist # determine a constant
 						d = abs(self.real_dist - self.tablet_height)
@@ -190,18 +185,116 @@ class Node():
 						# print " dcc self.speed ",self.speed
 						time.sleep(tc)
 			else:  # for initialization and controlled with joystick
+				
 				self.rc.SetPinFunctions(self.address, 0,2,0)
 				self.backward(20)
 				print "--"
-				
+
+		else:		
+			
+			self.stop()
+		
+		self.error_count = 0 # this means the program is executed and no error!	
+
+
+			# print "Pin Functions Value ",self.rc.ReadPinFunctions(self.address)
+			# print "Read Error Value ",self.rc.ReadError(self.address)
+
+
+
+	def callback_joy(self,joy): # using joy buttons to move
+		# speed = self.rc.ReadISpeedM1(self.address)
+		
+		
+		# constantly calculate the value of the encoder!
+		
+		if joy.buttons[2] == 1 or joy.buttons[1] == 1:
+			self.find_height_mode = False
+			self.joy_pressed = True
+		
+
+		if joy.buttons[1] == 0 or joy.buttons[2] == 0:
+			self.joy_pressed = False
+			self.go_down = False
+			self.go_up = False
+			
+			
+
+		if joy.buttons[2] == 1:
+			self.go_up = True
+			self.go_down = False
+			# print "Pin Functions Value ",self.rc.ReadPinFunctions(self.address)
+			# print "Read Error Value ",self.rc.ReadError(self.address)
+
+
+		elif joy.buttons[1] == 1:
+			
+			self.go_down = True
+			self.go_up = False
 			
 			# print "Pin Functions Value ",self.rc.ReadPinFunctions(self.address)
 			# print "Read Error Value ",self.rc.ReadError(self.address)
 
-		else:
-			self.stop()
+		# else:
+		# 	self.stop()
 		
-		self.error_count = 0 # this means the program is executed and no error!
+
+	def calculate_encoder(self):
+		enc = self.rc.ReadEncM1(self.address)
+		self.encoder_value = enc[1]
+
+		########## in initialization mode  ###################
+		if self.initialization_mode == True:
+			self.go_down = True
+			# set the s4 modes so it become an emergency stop
+			self.rc.SetPinFunctions(self.address, 0,2,0)
+			status = self.rc.ReadError(self.address)[1]
+			# print ("status value ",status)
+			# status of the emergency stop will be more than 0 if pressed
+			if status > 0:
+				
+				self.go_down = False
+				self.stop()
+				self.height_initialized = True
+				self.initialization_mode = False
+				self.reset()
+				
+
+		########## in finding tablet height mode ###############
+		if self.find_height_mode == True and self.height_confirmed == True:
+			
+			self.go_up = True
+			tolerance = self.tolerance
+			distance = self.update(self.encoder_value)
+
+			self.real_dist = distance
+			self.speed_control(distance,self.tablet_height)
+
+			# if distance bigger than lower boundary and smaller than upper boundary
+			# send a command / status to go up or go down or to stop
+			if distance > self.tablet_height - tolerance and distance < self.tablet_height + tolerance:
+				
+				self.go_up = False
+				self.stop()
+				self.goal_reached = True
+				self.last_goal = self.real_dist
+				
+			elif distance < self.tablet_height - tolerance:
+				self.go_up = True
+				self.go_down = False
+				self.goal_reached = False
+
+			elif distance > self.tablet_height + tolerance:
+				self.go_down = True
+				self.go_up = False
+				self.goal_reached = False
+
+
+		else:
+			pass
+
+		return self.encoder_value
+		
 
 	def speed_control(self,curr_dist,goal_dist):
 		total_distance = abs(goal_dist - self.last_goal)
@@ -264,64 +357,7 @@ class Node():
 				self.acc = False
 				self.dcc = False
 				self.goal_reached = True
-								
-
 	
-	def calculate_encoder(self):
-		enc = self.rc.ReadEncM1(self.address)
-		self.encoder_value = enc[1]
-
-		########## in initialization mode  ###################
-		if self.initialization_mode == True:
-			self.go_down = True
-			# set the s4 modes so it become an emergency stop
-			self.rc.SetPinFunctions(self.address, 0,2,0)
-			status = self.rc.ReadError(self.address)[1]
-			# print ("status value ",status)
-			# status of the emergency stop will be more than 0 if pressed
-			if status > 0:
-				self.go_down = False
-				self.stop()
-				self.height_initialized = True
-				self.initialization_mode = False
-				self.reset()
-				
-
-		########## in finding tablet height mode ###############
-		if self.find_height_mode == True and self.height_confirmed == True:
-			
-			self.go_up = True
-			tolerance = self.tolerance
-			distance = self.update(self.encoder_value)
-
-			self.real_dist = distance
-			self.speed_control(distance,self.tablet_height)
-
-			# if distance bigger than lower boundary and smaller than upper boundary
-			# send a command / status to go up or go down or to stop
-			if distance > self.tablet_height - tolerance and distance < self.tablet_height + tolerance:
-				self.go_up = False
-				self.stop()
-				self.goal_reached = True
-				self.last_goal = self.real_dist
-				
-			elif distance < self.tablet_height - tolerance:
-				self.go_up = True
-				self.go_down = False
-				self.goal_reached = False
-
-			elif distance > self.tablet_height + tolerance:
-				self.go_down = True
-				self.go_up = False
-				self.goal_reached = False
-
-
-		else:
-			pass
-
-		return self.encoder_value
-
-
 	def reset(self) :
 		self.rc.ResetEncoders(self.address)
 	
