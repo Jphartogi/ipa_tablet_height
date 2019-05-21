@@ -80,7 +80,7 @@ class Node():
 		self.joy_pressed = False
 		self.error_count = 0
 		self.rate = rospy.Rate(10) # 10hz
-		while not rospy.is_shutdown():
+		while not rospy.is_shutdown(): # to loop over and over again
 			self.callback()
 			self.rate.sleep()
 
@@ -90,11 +90,14 @@ class Node():
 		
 		self.error_count = self.error_count + 1
 		
+		## to remove error caused by the bumper
 		if self.error_count > 30:
 			rospy.signal_shutdown("restarted to remove error!")		
 		print "value error_count ", self.error_count
-
+		
 		# it will stuck here if there is an error
+		##
+
 		print "error value",self.rc.ReadError(self.address)
 		print "read encoder value", self.rc.ReadEncM1(self.address)
 		self.calculate_encoder()
@@ -111,7 +114,7 @@ class Node():
 				# acceleration mode
 				if not self.dcc: 
 					
-					if self.speed > self.max_speed - 1:
+					if self.speed > self.max_speed - 1: # if its at max speed, change to constant speed
 						
 						const_speed = self.speed
 						self.forward(const_speed)
@@ -127,10 +130,10 @@ class Node():
 					
 					if self.speed > self.min_speed - 1:
 						# create a linear equation speed = x * d + c
-						x = self.min_speed / self.dcc_dist
+						x = (self.max_speed - self.min_speed) / self.dcc_dist
 
 						d = abs(self.real_dist - self.tablet_height)
-						self.speed = int(round(x * d)) + (self.max_speed - self.min_speed)
+						self.speed = int(round(x * d)) + (self.min_speed)
 						# self.speed = self.speed - 1
 			
 						if self.speed > self.max_speed:
@@ -164,15 +167,14 @@ class Node():
 						
 					else:
 						self.speed = self.speed + 3
-						
 						self.backward(self.speed)
 						time.sleep(tc)
 				else: # decceleration mode
 					
 					if self.speed > self.min_speed - 1:
-						x = self.min_speed / self.dcc_dist # determine a constant
+						x = (self.max_speed - self.min_speed) / self.dcc_dist # determine a constant
 						d = abs(self.real_dist - self.tablet_height)
-						self.speed = int(round(x * d))+ (self.max_speed - self.min_speed)
+						self.speed = int(round(x * d))+ self.min_speed
 					
 						# for protection
 						if self.speed > self.max_speed:
@@ -184,6 +186,7 @@ class Node():
 						self.backward(self.min_speed)
 						# print " dcc self.speed ",self.speed
 						time.sleep(tc)
+
 			else:  # for initialization and controlled with joystick
 				
 				self.rc.SetPinFunctions(self.address, 0,2,0)
@@ -223,17 +226,13 @@ class Node():
 		if joy.buttons[2] == 1:
 			self.go_up = True
 			self.go_down = False
-			# print "Pin Functions Value ",self.rc.ReadPinFunctions(self.address)
-			# print "Read Error Value ",self.rc.ReadError(self.address)
-
+			
 
 		elif joy.buttons[1] == 1:
 			
 			self.go_down = True
 			self.go_up = False
-			
-			# print "Pin Functions Value ",self.rc.ReadPinFunctions(self.address)
-			# print "Read Error Value ",self.rc.ReadError(self.address)
+	
 
 		# else:
 		# 	self.stop()
@@ -252,7 +251,6 @@ class Node():
 			# print ("status value ",status)
 			# status of the emergency stop will be more than 0 if pressed
 			if status > 0:
-				
 				self.go_down = False
 				self.stop()
 				self.height_initialized = True
@@ -308,7 +306,7 @@ class Node():
 			if curr_dist > goal_dist - distance_to_acc and curr_dist < goal_dist - tolerance :
 				# calculate the remaining distance to target for the decceleration
 				if not self.trigger:
-					self.dcc_dist = abs(goal_dist - curr_dist)
+					self.dcc_dist = abs(goal_dist - curr_dist) # take the distance only once!
 					# set a trigger so it take only the first value
 					self.trigger = True
 				self.dcc = True
@@ -337,12 +335,10 @@ class Node():
 				# calculate the remaining distance to target for the decceleration
 				
 				if not self.trigger:
-					self.dcc_dist = abs(goal_dist - curr_dist)
+					self.dcc_dist = abs(goal_dist - curr_dist) # take the distance only once!
 					self.trigger = True
-
 				self.dcc = True
 				self.acc = False
-				
 				
 			# when to accelerate
 			elif curr_dist > goal_dist + distance_to_acc and not self.goal_reached:
@@ -352,7 +348,6 @@ class Node():
 				
 			# # when to constant
 			else:
-				
 				self.trigger = False
 				self.acc = False
 				self.dcc = False
@@ -379,7 +374,8 @@ class Node():
 			self.height_confirmed = True
 
 		if self.height_confirmed:
-			# this calculation is done manually
+
+			# this calculation is done manually, by manual measurement 
 			self.tablet_height = int(round(self.tablet_height/5))
 
 			# enter value in cm
@@ -394,7 +390,7 @@ class Node():
 				self.init()
 
 			else:
-				# read encoder value
+				
 				if self.height_initialized:
 					self.execute_tablet_height(goal_ticks)
 				if not self.height_initialized:
@@ -437,8 +433,8 @@ class Node():
 	def execute_tablet_height(self,height):
 		
 		if self.height_confirmed:
-			self.find_height_mode = True
-			self.goal_reached = False
+			self.find_height_mode = True  # trigger the status of automatic tablet height finding mode to true!
+			self.goal_reached = False 
 			
 	
 	def update(self, enc_value):
@@ -456,7 +452,7 @@ class Node():
 		
 				
 if __name__ == "__main__":
-	rospy.init_node('ipa_tablet_height',disable_signals=True)
+	rospy.init_node('ipa_tablet_height',disable_signals=True) # disable signals so it can be shutdown from the code!
 	node = Node()
 	rospy.loginfo("tablet height control is running")
 	rospy.spin()
