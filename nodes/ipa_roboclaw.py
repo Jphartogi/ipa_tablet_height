@@ -115,7 +115,6 @@ class Node():
 				if not self.dcc: 
 					
 					if self.speed > self.max_speed - 1: # if its at max speed, change to constant speed
-						
 						const_speed = self.speed
 						self.forward(const_speed)
 						
@@ -123,7 +122,6 @@ class Node():
 						
 						self.speed = self.speed + 3
 						self.forward(self.speed)
-						
 						time.sleep(tc)
 				# decceleration mode		
 				else:   
