@@ -88,7 +88,7 @@ class Node():
 	def callback(self):
 		# constantly calculate the value of the encoder!
 		
-		self.error_count = self.error_count + 1
+		self.error_count = self.error_count + 1 # increment for removing error
 		
 		## to remove error caused by the bumper
 		if self.error_count > 30:
@@ -98,8 +98,7 @@ class Node():
 		# it will stuck here if there is an error
 		##
 
-		print "error value",self.rc.ReadError(self.address)
-		print "read encoder value", self.rc.ReadEncM1(self.address)
+		# always calculate the value of the encoder and then decide what to do (go up or go down)
 		self.calculate_encoder()
 	
 		
@@ -206,8 +205,8 @@ class Node():
 	def callback_joy(self,joy): # using joy buttons to move
 		# speed = self.rc.ReadISpeedM1(self.address)
 		
-		
-		# constantly calculate the value of the encoder!
+		# this is joy callback, which can override the automatic function.
+		# this callback essentially just give status to go up or down 
 		
 		if joy.buttons[2] == 1 or joy.buttons[1] == 1:
 			self.find_height_mode = False
@@ -231,10 +230,7 @@ class Node():
 			self.go_down = True
 			self.go_up = False
 	
-
-		# else:
-		# 	self.stop()
-		
+	
 
 	def calculate_encoder(self):
 		enc = self.rc.ReadEncM1(self.address)
